@@ -111,6 +111,7 @@ This master document captures all architectural decisions, project requirements,
 | **`storefront-gateway`** | **Done** | Gin REST Gateway with `v1/auth`, `v1/product`, `v1/order`, and full middleware pipeline. |
 | **`admin-gateway`** | **Done** | Gin REST Gateway with `v1/admin`, `v1/chaos`, and metrics. |
 | **Dockerfiles** | **Done** | Multi-stage Alpine container build files for all 5 services. |
+| **CNPG HA PostgreSQL** | **Done** | CloudNativePG v1.25.0, 2 instances (Primary on worker, Standby on worker2) with synchronous WAL streaming, `app_db`, `app_user`, and `pg-cluster-rw` / `pg-cluster-ro` services. |
 
 ---
 

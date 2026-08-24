@@ -82,6 +82,33 @@ kind-load: ## Sideload built local Docker images into Kind cluster nodes
 	done
 
 # ==============================================================================
+# Data Layer & Storage (CloudNativePG HA PostgreSQL)
+# ==============================================================================
+
+.PHONY: deploy-db
+deploy-db: ## Apply PostgreSQL user secret and HA cluster manifests
+	@echo "==> Applying PostgreSQL Secret & Cluster in sre-data..."
+	@kubectl apply -f deploy/k8s/base/data/postgres-secret.yaml
+	@kubectl apply -f deploy/k8s/base/data/postgres-cluster.yaml
+	@echo "==> Waiting for PostgreSQL HA Cluster [pg-cluster] to become ready..."
+	@kubectl wait --namespace sre-data --for=condition=Ready cluster/pg-cluster --timeout=180s || true
+
+.PHONY: db-status
+db-status: ## Show CloudNativePG cluster health, pods, PVCs, and endpoints
+	@echo "==> CloudNativePG Cluster Status:"
+	@kubectl get cluster -n sre-data -o wide
+	@echo ""
+	@echo "==> PostgreSQL Pods:"
+	@kubectl get pods -n sre-data -o wide
+	@echo ""
+	@echo "==> Persistent Volume Claims:"
+	@kubectl get pvc -n sre-data
+
+.PHONY: db-shell
+db-shell: ## Open an interactive psql session to the primary PostgreSQL instance
+	@kubectl exec -it -n sre-data pg-cluster-1 -- bash -c 'PGPASSWORD=app_password psql -h localhost -U app_user -d app_db'
+
+# ==============================================================================
 # Cleanup
 # ==============================================================================
 

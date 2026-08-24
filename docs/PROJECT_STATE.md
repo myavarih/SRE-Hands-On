@@ -42,12 +42,12 @@ This document captures the project's exact architectural state, conventions, use
 
 ## 3. Remaining Roadmap (Phases 3 to 6)
 
-### Phase 3: Observability Stack Deployment
-- Deploy **CloudNativePG (CNPG)** Operator & HA PostgreSQL (1 Primary + 1 Standby Sync Replica) in `sre-data`.
-- Deploy **`kube-prometheus-stack`** (Prometheus Operator, Alertmanager, Grafana, Node Exporter, kube-state-metrics) in `sre-monitoring`.
-- Deploy **Grafana Tempo** in `sre-monitoring` for distributed trace storage.
-- Deploy **OpenTelemetry Collector** in `sre-monitoring` (routes OTLP traces $\rightarrow$ Tempo, metrics $\rightarrow$ Prometheus).
-- Deploy **Elasticsearch + Kibana + Fluent Bit** DaemonSet in `sre-logging`.
+### Phase 3: Data Layer & Observability Infrastructure
+- [x] **CloudNativePG (CNPG) Operator & HA PostgreSQL Cluster** (`deploy/k8s/base/data/`): 2 instances (1 Primary on `sre-lab-worker` + 1 Synchronous Standby replica on `sre-lab-worker2`) in `sre-data` with `minSyncReplicas: 1` ($RPO = 0$), `app_db`, `app_user`, and services `pg-cluster-rw` & `pg-cluster-ro`.
+- [ ] Deploy **`kube-prometheus-stack`** (Prometheus Operator, Alertmanager, Grafana, Node Exporter, kube-state-metrics) in `sre-monitoring`.
+- [ ] Deploy **Grafana Tempo** in `sre-monitoring` for distributed trace storage.
+- [ ] Deploy **OpenTelemetry Collector** in `sre-monitoring` (routes OTLP traces $\rightarrow$ Tempo, metrics $\rightarrow$ Prometheus).
+- [ ] Deploy **Elasticsearch + Kibana + Fluent Bit** DaemonSet in `sre-logging`.
 
 ### Phase 4: Observability Correlation & Frontend UI
 - Verify 3-Pillar Correlation in Grafana:

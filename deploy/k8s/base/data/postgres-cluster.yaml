@@ -1,0 +1,42 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: sre-data
+  labels:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/component: database
+spec:
+  instances: 2
+  minSyncReplicas: 1
+  maxSyncReplicas: 1
+
+  # High availability failover configuration
+  failoverDelay: 0
+
+  bootstrap:
+    initdb:
+      database: app_db
+      owner: app_user
+      secret:
+        name: pg-cluster-app-user
+
+  storage:
+    size: 1Gi
+    storageClass: standard
+
+  # Distribute across distinct worker nodes for true high availability
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: kubernetes.io/hostname
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  monitoring:
+    enablePodMonitor: false
