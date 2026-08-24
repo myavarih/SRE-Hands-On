@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package payment.v1;
+option go_package = "github.com/myavarih/sre-hands-on/services/gen/go/payment/v1;paymentv1";
+
+service PaymentService {
+  rpc ProcessPayment(ProcessPaymentRequest) returns (ProcessPaymentResponse);
+  rpc GetPaymentStatus(GetPaymentStatusRequest) returns (GetPaymentStatusResponse);
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+  rpc SetChaosConfig(SetChaosConfigRequest) returns (SetChaosConfigResponse);
+}
+
+message ProcessPaymentRequest {
+  string order_id = 1;
+  string user_id = 2;
+  int64 amount_cents = 3;
+  string payment_method = 4;
+}
+
+message ProcessPaymentResponse {
+  string payment_id = 1;
+  string order_id = 2;
+  string transaction_ref = 3;
+  string status = 4; // SUCCESS or FAILED
+  string message = 5;
+  string processed_at = 6;
+}
+
+message GetPaymentStatusRequest {
+  string payment_id = 1;
+}
+
+message GetPaymentStatusResponse {
+  string payment_id = 1;
+  string order_id = 2;
+  int64 amount_cents = 3;
+  string status = 4;
+  string transaction_ref = 5;
+}
+
+message SendNotificationRequest {
+  string user_id = 1;
+  string recipient = 2;
+  string channel = 3; // EMAIL or SMS
+  string message = 4;
+}
+
+message SendNotificationResponse {
+  string notification_id = 1;
+  string status = 2; // SENT or FAILED
+}
+
+message SetChaosConfigRequest {
+  int32 latency_ms = 1;
+  double error_rate = 2; // 0.0 to 1.0
+  bool enabled = 3;
+}
+
+message SetChaosConfigResponse {
+  bool success = 1;
+  string current_status = 2;
+}

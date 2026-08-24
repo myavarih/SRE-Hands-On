@@ -45,11 +45,14 @@ status: ## Display cluster nodes, pods across all namespaces, and endpoints
 .PHONY: proto
 proto: ## Compile all Protocol Buffer (.proto) service definitions into Go code
 	@echo "==> Generating Protobuf & gRPC Go stubs..."
-	@mkdir -p services/gen/go
-	@protoc -I api/proto \
-		--go_out=services/gen/go --go_opt=paths=source_relative \
-		--go-grpc_out=services/gen/go --go-grpc_opt=paths=source_relative \
-		api/proto/**/*.proto 2>/dev/null || echo "Note: Add .proto files under api/proto/ to generate stubs."
+	@export PATH=$$PATH:$$(go env GOPATH)/bin && \
+	mkdir -p services/gen/go && \
+	protoc -I api/proto \
+		--go_out=. --go_opt=module=github.com/myavarih/sre-hands-on \
+		--go-grpc_out=. --go-grpc_opt=module=github.com/myavarih/sre-hands-on \
+		api/proto/auth/v1/auth.proto \
+		api/proto/order/v1/order.proto \
+		api/proto/payment/v1/payment.proto
 
 .PHONY: test
 test: ## Run unit tests with race condition detector and coverage
