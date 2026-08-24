@@ -1,0 +1,29 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: sre-lab
+nodes:
+  # Node 1: Control-plane (also hosts NGINX Ingress with hostPort mappings)
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
+
+  # Node 2: Worker 1 (Workloads & Database Primary)
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone-a
+
+  # Node 3: Worker 2 (Workloads & Database Standby & Monitoring)
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone-b
