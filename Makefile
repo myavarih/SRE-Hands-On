@@ -120,14 +120,15 @@ deploy-monitoring: ## Deploy/Upgrade kube-prometheus-stack, monitors, alerts, an
 		-f deploy/k8s/base/monitoring/values/values-prometheus.yaml \
 		-f deploy/k8s/base/monitoring/values/values-grafana.yaml \
 		-f deploy/k8s/base/monitoring/values/values-alertmanager.yaml
-	@echo "==> Applying Scrapers, Alert Rules, and Dashboards..."
+	@echo "==> Applying Scrapers, Alert Rules, Dashboards, and Tracing..."
 	@kubectl apply -f deploy/k8s/base/monitoring/monitors/
 	@kubectl apply -f deploy/k8s/base/monitoring/alerts/
 	@kubectl apply -f deploy/k8s/base/monitoring/dashboards/
+	@kubectl apply -f deploy/k8s/base/monitoring/tracing/
 
 .PHONY: monitoring-status
 monitoring-status: ## Check status of all monitoring components in sre-monitoring
-	@echo "==> Monitoring Pods:"
+	@echo "==> Monitoring & Tracing Pods:"
 	@kubectl get pods -n sre-monitoring -o wide
 	@echo ""
 	@echo "==> PrometheusRules:"
