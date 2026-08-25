@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sre-lab-ingress
+  namespace: sre-app
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "15"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          # 1. Frontend Dashboard UI
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+
+          # 2. Storefront REST Gateway
+          - path: /api/v1/store
+            pathType: Prefix
+            backend:
+              service:
+                name: storefront-gateway
+                port:
+                  number: 8080
+
+          # 3. Admin & Chaos REST Gateway
+          - path: /api/v1/admin
+            pathType: Prefix
+            backend:
+              service:
+                name: admin-gateway
+                port:
+                  number: 8081

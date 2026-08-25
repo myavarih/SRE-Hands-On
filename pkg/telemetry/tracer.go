@@ -54,7 +54,7 @@ func InitTracer(ctx context.Context, serviceName, collectorAddr string) (func(co
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(exporter),
+		sdktrace.WithBatcher(exporter, sdktrace.WithBatchTimeout(500*time.Millisecond)),
 		sdktrace.WithResource(res),
 	)
 

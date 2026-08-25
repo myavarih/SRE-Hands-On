@@ -47,21 +47,23 @@ spec:
               cpu: 100m
               memory: 512Mi
             limits:
-              cpu: 500m
-              memory: 1Gi
-          readinessProbe:
-            httpGet:
-              path: /_cluster/health?local=true
+              cpu: 1000m
+              memory: 1.5Gi
+          startupProbe:
+            tcpSocket:
               port: 9200
-            initialDelaySeconds: 15
+            initialDelaySeconds: 10
             periodSeconds: 5
-            failureThreshold: 10
-          livenessProbe:
-            httpGet:
-              path: /_cluster/health?local=true
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket:
               port: 9200
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            periodSeconds: 5
+            failureThreshold: 5
+          livenessProbe:
+            tcpSocket:
+              port: 9200
+            periodSeconds: 15
             failureThreshold: 5
           volumeMounts:
             - name: es-data

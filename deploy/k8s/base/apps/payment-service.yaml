@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: sre-app
+  labels:
+    app.kubernetes.io/name: payment-service
+    app.kubernetes.io/part-of: sre-hands-on
+    app.kubernetes.io/component: service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: payment-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: payment-service
+        app.kubernetes.io/part-of: sre-hands-on
+        app.kubernetes.io/component: service
+    spec:
+      containers:
+        - name: payment-service
+          image: payment-service:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: SERVICE_NAME
+              value: "payment-service"
+            - name: DATABASE_DSN
+              value: "host=pg-cluster-rw.sre-data.svc.cluster.local user=app_user password=app_password dbname=app_db port=5432 sslmode=disable"
+            - name: GRPC_PORT
+              value: "50053"
+            - name: METRICS_PORT
+              value: "9090"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "otel-collector.sre-monitoring.svc.cluster.local:4317"
+          ports:
+            - name: grpc
+              containerPort: 50053
+            - name: metrics
+              containerPort: 9090
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: sre-app
+  labels:
+    app.kubernetes.io/name: payment-service
+    app.kubernetes.io/part-of: sre-hands-on
+    app.kubernetes.io/component: service
+spec:
+  selector:
+    app.kubernetes.io/name: payment-service
+  ports:
+    - name: grpc
+      port: 50053
+      targetPort: 50053
+    - name: metrics
+      port: 9090
+      targetPort: 9090

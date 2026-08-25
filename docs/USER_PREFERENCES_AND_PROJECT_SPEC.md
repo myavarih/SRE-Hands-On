@@ -115,6 +115,9 @@ This master document captures all architectural decisions, project requirements,
 | **`kube-prometheus-stack`** | **Done** | Prometheus Operator, Prometheus Server (Exemplar storage + 2Gi PVC), Alertmanager (1Gi PVC), Grafana (with 3-pillar datasources & sidecar dashboards), Node Exporters, `cnpg-cluster-metrics` PodMonitor, `microservices-monitor` ServiceMonitor, and `sre-slo-alerts` / `postgres-alerts` PrometheusRules. |
 | **Tempo & OTel Collector** | **Done** | Grafana Tempo v2.6.1 distributed tracing storage, OpenTelemetry Collector Contrib v0.114.0 (OTLP gRPC `:4317` receiver, batch processor, memory limiter, Tempo exporter, Prometheus exporter). |
 | **Logging Stack (EFK)** | **Done** | Elasticsearch v8.14.3 with 512MB JVM heap & 2Gi PVC, Fluent Bit v3.1.9 DaemonSet on all 3 nodes (CRI log parsing + Kubernetes metadata enrichment), Kibana v8.14.3 UI on port 5601. |
+| **Microservices Deployments** | **Done** | Declarative Deployment & Service manifests for `auth-service`, `order-service`, `payment-service`, `storefront-gateway`, `admin-gateway` in `sre-app`. |
+| **Frontend UI & Ingress** | **Done** | Vanilla HTML5/JS dashboard frontend on port 80, NGINX Ingress routes for `/`, `/api/v1/store/`, `/api/v1/admin/`. |
+| **3-Pillar Correlation** | **Done** | Verified: Prometheus metrics, Tempo distributed traces (`storefront` $\to$ `order` $\to$ `payment`), Elasticsearch logs enriched with `trace_id` & `span_id`, SRE Chaos fault injection. |
 
 ---
 

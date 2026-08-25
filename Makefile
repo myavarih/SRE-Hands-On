@@ -68,7 +68,10 @@ docker-build: ## Build Docker images for all microservices locally
 	@for svc in $(SERVICES); do \
 		if [ -f services/$$svc/Dockerfile ]; then \
 			echo "==> Building Docker image [$$svc:latest]..."; \
-			docker build -t $$svc:latest -f services/$$svc/Dockerfile services/$$svc; \
+			docker build -t $$svc:latest -f services/$$svc/Dockerfile .; \
+		elif [ -f frontend/Dockerfile ] && [ "$$svc" = "frontend" ]; then \
+			echo "==> Building Docker image [frontend:latest]..."; \
+			docker build -t frontend:latest -f frontend/Dockerfile frontend; \
 		fi \
 	done
 
@@ -173,6 +176,47 @@ kibana-port-forward: ## Forward Kibana UI to localhost:5601
 es-port-forward: ## Forward Elasticsearch API to localhost:9200
 	@echo "==> Forwarding Elasticsearch to http://localhost:9200..."
 	@kubectl port-forward -n sre-logging svc/elasticsearch 9200:9200
+
+# ==============================================================================
+# Microservices & Frontend Application Layer (sre-app)
+# ==============================================================================
+
+.PHONY: deploy-apps
+deploy-apps: ## Deploy microservices, frontend UI, and Ingress into sre-app
+	@echo "==> Deploying Microservices & Ingress into sre-app..."
+	@kubectl apply -f deploy/k8s/base/apps/
+	@kubectl apply -f deploy/k8s/base/ingress/
+
+.PHONY: apps-status
+apps-status: ## Check status of all microservices, frontend, and Ingress in sre-app
+	@echo "==> Application Pods & Services in sre-app:"
+	@kubectl get pods,svc,ingress -n sre-app -o wide
+
+.PHONY: traffic-gen
+traffic-gen: ## Send synthetic orders through Ingress to generate metrics, traces, and logs
+	@echo "==> Generating synthetic order traffic..."
+	@TOKEN=$$(curl -s -X POST http://localhost/api/v1/store/auth/login -H "Content-Type: application/json" -d '{"username":"sre_lead","password":"sre-password-123"}' | jq -r .data.token 2>/dev/null || true); \
+	if [ -z "$$TOKEN" ] || [ "$$TOKEN" = "null" ]; then \
+		echo "Registering user sre_lead..."; \
+		curl -s -X POST http://localhost/api/v1/store/auth/register -H "Content-Type: application/json" -d '{"username":"sre_lead","email":"engineer@sre.lab","password":"sre-password-123"}' > /dev/null; \
+		TOKEN=$$(curl -s -X POST http://localhost/api/v1/store/auth/login -H "Content-Type: application/json" -d '{"username":"sre_lead","password":"sre-password-123"}' | jq -r .data.token); \
+	fi; \
+	PROD_IDS=($$(curl -s http://localhost/api/v1/store/products | jq -r '.data[].id')); \
+	for i in {1..5}; do \
+		PID=$${PROD_IDS[$$((RANDOM % $${#PROD_IDS[@]}))]}; \
+		curl -s -X POST http://localhost/api/v1/store/orders -H "Content-Type: application/json" -H "Authorization: Bearer $$TOKEN" -d "{\"items\":[{\"product_id\":\"$$PID\",\"quantity\":1}],\"payment_method\":\"credit_card\"}" | jq -c '{order_id: .data.order_id, status: .data.status, total: .data.total_price_cents}'; \
+		sleep 0.3; \
+	done
+
+.PHONY: chaos-inject
+chaos-inject: ## Inject 1500ms latency delay into payment-service via Admin Gateway
+	@echo "==> Injecting 1500ms latency into payment-service..."
+	@curl -s -X POST http://localhost/api/v1/admin/chaos/fault-injection -H "Content-Type: application/json" -d '{"latency_ms":1500,"error_rate":0.0,"enabled":true}' | jq .
+
+.PHONY: chaos-reset
+chaos-reset: ## Reset chaos faults in payment-service to nominal
+	@echo "==> Resetting chaos faults..."
+	@curl -s -X POST http://localhost/api/v1/admin/chaos/fault-injection -H "Content-Type: application/json" -d '{"latency_ms":0,"error_rate":0.0,"enabled":false}' | jq .
 
 # ==============================================================================
 # Cleanup

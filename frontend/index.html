@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRE Hands-On Observability & Chaos Lab</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --danger: #f43f5e;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font); }
+    body { background-color: var(--bg); color: var(--text); padding: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; }
+    h1 { font-size: 24px; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+    .badge { background: #0369a1; color: #e0f2fe; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
+    .links-bar { display: flex; gap: 12px; }
+    .btn-link { background: var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500; transition: background 0.2s; }
+    .btn-link:hover { background: var(--primary-hover); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .card h2 { font-size: 16px; margin-bottom: 14px; color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 8px; display: flex; justify-content: space-between; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    input, select { width: 100%; background: #0f172a; border: 1px solid var(--border); color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+    input:focus, select:focus { border-color: var(--primary); }
+    .btn { width: 100%; background: var(--primary); color: #0f172a; font-weight: 600; padding: 9px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; transition: background 0.2s; }
+    .btn:hover { background: var(--primary-hover); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #be123c; }
+    .btn-warning { background: var(--warning); color: #0f172a; }
+    .btn-warning:hover { background: #d97706; }
+    .btn-group { display: flex; gap: 8px; margin-top: 8px; }
+    .log-box { background: #090d16; border: 1px solid var(--border); border-radius: 6px; padding: 12px; height: 180px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #a7f3d0; margin-top: 10px; }
+    .log-entry { margin-bottom: 4px; word-break: break-all; }
+    .log-error { color: #f87171; }
+    .log-info { color: #38bdf8; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; background: var(--success); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><span class="status-dot"></span> SRE Observability & Chaos Lab</h1>
+    <div class="links-bar">
+      <a href="http://localhost:3000" target="_blank" class="btn-link">📊 Grafana</a>
+      <a href="http://localhost:9090" target="_blank" class="btn-link">📈 Prometheus</a>
+      <a href="http://localhost:5601" target="_blank" class="btn-link">📑 Kibana</a>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Card 1: Auth & Session -->
+    <div class="card">
+      <h2>1. User Authentication <span class="badge" id="authBadge">Logged Out</span></h2>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="authUsername" value="sre_lead">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="authEmail" value="engineer@sre.lab">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="authPassword" value="sre-password-123">
+      </div>
+      <div class="btn-group">
+        <button class="btn" onclick="registerUser()">Register</button>
+        <button class="btn" onclick="loginUser()">Login</button>
+      </div>
+    </div>
+
+    <!-- Card 2: Storefront Order Placement -->
+    <div class="card">
+      <h2>2. Storefront Orders & Payments <span class="badge">Storefront Gateway</span></h2>
+      <div class="form-group">
+        <label>Product Item</label>
+        <select id="productId">
+          <option value="loading">Loading products from backend...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Quantity</label>
+        <input type="number" id="orderQty" value="1" min="1" max="10">
+      </div>
+      <div class="form-group">
+        <label>Payment Method</label>
+        <select id="paymentMethod">
+          <option value="credit_card">Credit Card (Instant)</option>
+          <option value="crypto">Crypto Wallet</option>
+          <option value="corporate_po">Corporate PO</option>
+        </select>
+      </div>
+      <button class="btn" onclick="placeOrder()">⚡ Place Order (Triggers Payment)</button>
+    </div>
+
+    <!-- Card 3: SRE Chaos Engineering Hook -->
+    <div class="card">
+      <h2>3. SRE Chaos & Fault Injection <span class="badge" style="background:#be123c">Admin Gateway</span></h2>
+      <div class="form-group">
+        <label>Inject Latency Delay (Milliseconds)</label>
+        <input type="number" id="chaosDelay" value="1500" min="0" step="100">
+      </div>
+      <div class="form-group">
+        <label>Inject Error Rate (0.0 to 1.0)</label>
+        <input type="number" id="chaosErrorRate" value="0.5" min="0" max="1" step="0.1">
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-danger" onclick="injectChaos()">💥 Inject Fault</button>
+        <button class="btn btn-warning" onclick="resetChaos()">🔄 Reset Chaos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Output Console -->
+  <div style="margin-top: 20px;">
+    <h3 style="font-size: 14px; color: var(--text-muted); margin-bottom: 6px;">Live Transaction Console (Trace & HTTP Responses):</h3>
+    <div class="log-box" id="consoleLog">
+      <div class="log-entry log-info">[System] SRE Hands-On Observability Dashboard Ready. Ingress routes bound to http://localhost/</div>
+    </div>
+  </div>
+
+  <script>
+    let authToken = "";
+
+    function log(msg, type = "info") {
+      const box = document.getElementById("consoleLog");
+      const div = document.createElement("div");
+      div.className = "log-entry " + (type === "error" ? "log-error" : "log-info");
+      const time = new Date().toISOString().split("T")[1].slice(0, 8);
+      div.textContent = `[${time}] ${msg}`;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function loadProducts() {
+      try {
+        const res = await fetch("/api/v1/store/products");
+        const json = await res.json();
+        const select = document.getElementById("productId");
+        select.innerHTML = "";
+        if (json.data && json.data.length > 0) {
+          json.data.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.id;
+            opt.textContent = `${p.name} ($${(p.price_cents/100).toFixed(2)}) — Stock: ${p.stock_quantity}`;
+            select.appendChild(opt);
+          });
+          log(`Loaded ${json.data.length} products from backend DB.`, "info");
+        }
+      } catch (err) {
+        log(`Failed to fetch products: ${err.message}`, "error");
+      }
+    }
+
+    async function registerUser() {
+      const username = document.getElementById("authUsername").value;
+      const email = document.getElementById("authEmail").value;
+      const password = document.getElementById("authPassword").value;
+      try {
+        const res = await fetch("/api/v1/store/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, email, password })
+        });
+        const data = await res.json();
+        log(`Registered user [${username}]: ${JSON.stringify(data)}`);
+      } catch (err) {
+        log(`Register failed: ${err.message}`, "error");
+      }
+    }
+
+    async function loginUser() {
+      const username = document.getElementById("authUsername").value;
+      const password = document.getElementById("authPassword").value;
+      try {
+        const res = await fetch("/api/v1/store/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (data.data && data.data.token) {
+          authToken = data.data.token;
+          document.getElementById("authBadge").textContent = "Logged In (" + username + ")";
+          document.getElementById("authBadge").style.background = "#059669";
+          log(`Login successful! JWT Token acquired.`, "info");
+        } else {
+          log(`Login error: ${JSON.stringify(data)}`, "error");
+        }
+      } catch (err) {
+        log(`Login failed: ${err.message}`, "error");
+      }
+    }
+
+    async function placeOrder() {
+      const productId = document.getElementById("productId").value;
+      const quantity = parseInt(document.getElementById("orderQty").value);
+      const paymentMethod = document.getElementById("paymentMethod").value;
+      const headers = { "Content-Type": "application/json" };
+      if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+
+      log(`Sending Order request for [${productId}] qty:${quantity}...`);
+      try {
+        const start = performance.now();
+        const res = await fetch("/api/v1/store/orders", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            items: [{ product_id: productId, quantity }],
+            payment_method: paymentMethod
+          })
+        });
+        const duration = (performance.now() - start).toFixed(0);
+        const data = await res.json();
+        if (res.ok) {
+          log(`Order SUCCESS [${duration}ms]: OrderID=${data.data?.order_id}, Status=${data.data?.status}, Total=$${(data.data?.total_cents/100).toFixed(2)}`, "info");
+          loadProducts(); // refresh stock
+        } else {
+          log(`Order FAILED [${duration}ms HTTP ${res.status}]: ${JSON.stringify(data)}`, "error");
+        }
+      } catch (err) {
+        log(`Order request exception: ${err.message}`, "error");
+      }
+    }
+
+    async function injectChaos() {
+      const delayMs = parseInt(document.getElementById("chaosDelay").value);
+      const errorRate = parseFloat(document.getElementById("chaosErrorRate").value);
+      const headers = { "Content-Type": "application/json" };
+
+      try {
+        const res = await fetch("/api/v1/admin/chaos/fault-injection", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            latency_ms: delayMs,
+            error_rate: errorRate,
+            enabled: true
+          })
+        });
+        const data = await res.json();
+        log(`💥 Chaos injected into payment-service: delay=${delayMs}ms, error_rate=${errorRate * 100}%`, "error");
+      } catch (err) {
+        log(`Chaos injection failed: ${err.message}`, "error");
+      }
+    }
+
+    async function resetChaos() {
+      const headers = { "Content-Type": "application/json" };
+
+      try {
+        const res = await fetch("/api/v1/admin/chaos/fault-injection", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            latency_ms: 0,
+            error_rate: 0.0,
+            enabled: false
+          })
+        });
+        const data = await res.json();
+        log(`🔄 Chaos reset. payment-service restored to nominal state.`, "info");
+      } catch (err) {
+        log(`Chaos reset failed: ${err.message}`, "error");
+      }
+    }
+
+    // Auto load products on startup
+    window.addEventListener("DOMContentLoaded", loadProducts);
+  </script>
+</body>
+</html>

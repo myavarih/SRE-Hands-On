@@ -48,10 +48,15 @@ This document captures the project's exact architectural state, conventions, use
 - [x] **Grafana Tempo & OpenTelemetry Collector** (`deploy/k8s/base/monitoring/tracing/`): Grafana Tempo v2.6.1 distributed tracing storage, OpenTelemetry Collector Contrib v0.114.0 (OTLP gRPC `:4317` receiver, batch processor, memory limiter, OTLP/Tempo exporter, Prometheus exporter).
 - [x] **Elasticsearch + Kibana + Fluent Bit DaemonSet** (`deploy/k8s/base/logging/`): Elasticsearch v8.14.3 with 512MB heap & 2Gi PVC, Fluent Bit v3.1.9 DaemonSet on all 3 nodes (CRI log parsing + Kubernetes metadata enrichment), Kibana v8.14.3 UI on port 5601.
 
-### Phase 4: Observability Correlation & Frontend UI
-- Verify 3-Pillar Correlation in Grafana:
-  - Metric latency spikes $\rightarrow$ Click Exemplar $\rightarrow$ Jumps to Tempo Trace $\rightarrow$ Jumps to Elasticsearch Pod Logs.
-- Create static Vanilla HTML5/JS Frontend dashboard and NGINX Ingress routes.
+### Phase 4: Observability Correlation & Frontend UI (COMPLETE)
+- [x] **Microservices & Gateway Kubernetes Deployments** (`deploy/k8s/base/apps/`): Deployments and ClusterIP Services for `auth-service`, `order-service`, `payment-service`, `storefront-gateway`, `admin-gateway`, and `frontend`.
+- [x] **Static HTML5/JS Frontend Dashboard** (`frontend/index.html`): User registration, JWT login, live product catalogue, order placement, SRE chaos fault injection controls, and direct links to Grafana, Prometheus, and Kibana.
+- [x] **NGINX Ingress Routing** (`deploy/k8s/base/ingress/ingress.yaml`): HostPort binding routing `http://localhost/` to frontend, `/api/v1/store/` to Storefront Gateway, and `/api/v1/admin/` to Admin Gateway.
+- [x] **3-Pillar Observability Correlation Verified**:
+  - Prometheus scrapes RED metrics (`http_requests_total`, `http_request_duration_seconds`) from microservices and gateways.
+  - OpenTelemetry distributed tracing spans flow from gateways across gRPC calls to Tempo (`http://tempo.sre-monitoring:3100/api/traces/{traceID}`).
+  - Structured JSON logs emitted by slog with `trace_id` and `span_id` are ingested by Fluent Bit DaemonSet and searchable in Elasticsearch.
+  - SRE Chaos fault injection verified: 1500ms injected delay in `payment-service` accurately recorded across metrics, traces, and logs.
 
 ### Phase 5: GitOps Delivery with ArgoCD
 - Deploy **ArgoCD** in `argocd` namespace.

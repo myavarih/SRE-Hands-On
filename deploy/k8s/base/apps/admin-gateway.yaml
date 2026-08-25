@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-gateway
+  namespace: sre-app
+  labels:
+    app.kubernetes.io/name: admin-gateway
+    app.kubernetes.io/part-of: sre-hands-on
+    app.kubernetes.io/component: gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: admin-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: admin-gateway
+        app.kubernetes.io/part-of: sre-hands-on
+        app.kubernetes.io/component: gateway
+    spec:
+      containers:
+        - name: admin-gateway
+          image: admin-gateway:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: SERVICE_NAME
+              value: "admin-gateway"
+            - name: HTTP_PORT
+              value: "8081"
+            - name: METRICS_PORT
+              value: "8081"
+            - name: ORDER_SERVICE_ADDR
+              value: "order-service.sre-app.svc.cluster.local:50052"
+            - name: PAYMENT_SERVICE_ADDR
+              value: "payment-service.sre-app.svc.cluster.local:50053"
+            - name: JWT_SECRET
+              value: "sre-super-secret-jwt-key-change-in-prod"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "otel-collector.sre-monitoring.svc.cluster.local:4317"
+          ports:
+            - name: http
+              containerPort: 8081
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-gateway
+  namespace: sre-app
+  labels:
+    app.kubernetes.io/name: admin-gateway
+    app.kubernetes.io/part-of: sre-hands-on
+    app.kubernetes.io/component: gateway
+spec:
+  selector:
+    app.kubernetes.io/name: admin-gateway
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081

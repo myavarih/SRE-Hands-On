@@ -35,18 +35,22 @@ spec:
               cpu: 100m
               memory: 256Mi
             limits:
-              cpu: 400m
-              memory: 512Mi
+              cpu: 800m
+              memory: 768Mi
+          startupProbe:
+            tcpSocket:
+              port: 5601
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             tcpSocket:
               port: 5601
-            initialDelaySeconds: 30
             periodSeconds: 5
-            failureThreshold: 15
+            failureThreshold: 5
           livenessProbe:
             tcpSocket:
               port: 5601
-            initialDelaySeconds: 90
             periodSeconds: 15
             failureThreshold: 5
 ---

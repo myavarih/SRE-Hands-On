@@ -27,6 +27,7 @@ func SetupRouter(p RouterParams) *gin.Engine {
 	// Global Middlewares
 	router.Use(middleware.RecoveryMiddleware(p.Logger))
 	router.Use(middleware.CORSMiddleware())
+	router.Use(middleware.TracingMiddleware(p.ServiceName))
 	router.Use(middleware.LoggingMiddleware(p.Logger))
 	router.Use(middleware.PrometheusMiddleware(p.ServiceName))
 	router.Use(middleware.RateLimitMiddleware(p.ServiceName, 100, 200))
