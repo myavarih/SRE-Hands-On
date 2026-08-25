@@ -114,6 +114,7 @@ This master document captures all architectural decisions, project requirements,
 | **CNPG HA PostgreSQL** | **Done** | CloudNativePG v1.25.0, 2 instances (Primary on worker, Standby on worker2) with synchronous WAL streaming, `app_db`, `app_user`, and `pg-cluster-rw` / `pg-cluster-ro` services. |
 | **`kube-prometheus-stack`** | **Done** | Prometheus Operator, Prometheus Server (Exemplar storage + 2Gi PVC), Alertmanager (1Gi PVC), Grafana (with 3-pillar datasources & sidecar dashboards), Node Exporters, `cnpg-cluster-metrics` PodMonitor, `microservices-monitor` ServiceMonitor, and `sre-slo-alerts` / `postgres-alerts` PrometheusRules. |
 | **Tempo & OTel Collector** | **Done** | Grafana Tempo v2.6.1 distributed tracing storage, OpenTelemetry Collector Contrib v0.114.0 (OTLP gRPC `:4317` receiver, batch processor, memory limiter, Tempo exporter, Prometheus exporter). |
+| **Logging Stack (EFK)** | **Done** | Elasticsearch v8.14.3 with 512MB JVM heap & 2Gi PVC, Fluent Bit v3.1.9 DaemonSet on all 3 nodes (CRI log parsing + Kubernetes metadata enrichment), Kibana v8.14.3 UI on port 5601. |
 
 ---
 

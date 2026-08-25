@@ -42,11 +42,11 @@ This document captures the project's exact architectural state, conventions, use
 
 ## 3. Remaining Roadmap (Phases 3 to 6)
 
-### Phase 3: Data Layer & Observability Infrastructure
+### Phase 3: Data Layer & Observability Infrastructure (Complete)
 - [x] **CloudNativePG (CNPG) Operator & HA PostgreSQL Cluster** (`deploy/k8s/base/data/`): 2 instances (1 Primary on `sre-lab-worker` + 1 Synchronous Standby replica on `sre-lab-worker2`) in `sre-data` with `minSyncReplicas: 1` ($RPO = 0$), `app_db`, `app_user`, and services `pg-cluster-rw` & `pg-cluster-ro`.
 - [x] **`kube-prometheus-stack`** (`deploy/k8s/base/monitoring/`): Prometheus Operator, Prometheus Server (with Exemplars & 2Gi PVC), Alertmanager (1Gi PVC), Grafana (with pre-wired 3-pillar datasources & sidecar dashboard auto-discovery), Node Exporters, `cnpg-cluster-metrics` PodMonitor, `microservices-monitor` ServiceMonitor, and `sre-slo-alerts` / `postgres-alerts` PrometheusRules.
 - [x] **Grafana Tempo & OpenTelemetry Collector** (`deploy/k8s/base/monitoring/tracing/`): Grafana Tempo v2.6.1 distributed tracing storage, OpenTelemetry Collector Contrib v0.114.0 (OTLP gRPC `:4317` receiver, batch processor, memory limiter, OTLP/Tempo exporter, Prometheus exporter).
-- [ ] Deploy **Elasticsearch + Kibana + Fluent Bit** DaemonSet in `sre-logging`.
+- [x] **Elasticsearch + Kibana + Fluent Bit DaemonSet** (`deploy/k8s/base/logging/`): Elasticsearch v8.14.3 with 512MB heap & 2Gi PVC, Fluent Bit v3.1.9 DaemonSet on all 3 nodes (CRI log parsing + Kubernetes metadata enrichment), Kibana v8.14.3 UI on port 5601.
 
 ### Phase 4: Observability Correlation & Frontend UI
 - Verify 3-Pillar Correlation in Grafana:

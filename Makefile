@@ -148,6 +148,33 @@ prom-port-forward: ## Forward Prometheus UI to localhost:9090
 	@kubectl port-forward -n sre-monitoring svc/k8s-monitoring-prometheus 9090:9090
 
 # ==============================================================================
+# Logging Layer (Elasticsearch, Fluent Bit, Kibana)
+# ==============================================================================
+
+.PHONY: deploy-logging
+deploy-logging: ## Deploy Elasticsearch, Fluent Bit DaemonSet, and Kibana in sre-logging
+	@echo "==> Deploying Logging Stack in sre-logging..."
+	@kubectl apply -f deploy/k8s/base/logging/
+
+.PHONY: logging-status
+logging-status: ## Check status of all logging components in sre-logging
+	@echo "==> Logging Pods & Services:"
+	@kubectl get pods,svc -n sre-logging -o wide
+	@echo ""
+	@echo "==> Elasticsearch Cluster Health & Indices:"
+	@kubectl exec -n sre-logging elasticsearch-0 -- curl -s http://localhost:9200/_cat/indices?v || true
+
+.PHONY: kibana-port-forward
+kibana-port-forward: ## Forward Kibana UI to localhost:5601
+	@echo "==> Forwarding Kibana to http://localhost:5601..."
+	@kubectl port-forward -n sre-logging svc/kibana 5601:5601
+
+.PHONY: es-port-forward
+es-port-forward: ## Forward Elasticsearch API to localhost:9200
+	@echo "==> Forwarding Elasticsearch to http://localhost:9200..."
+	@kubectl port-forward -n sre-logging svc/elasticsearch 9200:9200
+
+# ==============================================================================
 # Cleanup
 # ==============================================================================
 
