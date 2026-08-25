@@ -44,7 +44,7 @@ This document captures the project's exact architectural state, conventions, use
 
 ### Phase 3: Data Layer & Observability Infrastructure
 - [x] **CloudNativePG (CNPG) Operator & HA PostgreSQL Cluster** (`deploy/k8s/base/data/`): 2 instances (1 Primary on `sre-lab-worker` + 1 Synchronous Standby replica on `sre-lab-worker2`) in `sre-data` with `minSyncReplicas: 1` ($RPO = 0$), `app_db`, `app_user`, and services `pg-cluster-rw` & `pg-cluster-ro`.
-- [ ] Deploy **`kube-prometheus-stack`** (Prometheus Operator, Alertmanager, Grafana, Node Exporter, kube-state-metrics) in `sre-monitoring`.
+- [x] **`kube-prometheus-stack`** (`deploy/k8s/base/monitoring/`): Prometheus Operator, Prometheus Server (with Exemplars & 2Gi PVC), Alertmanager (1Gi PVC), Grafana (with pre-wired 3-pillar datasources & sidecar dashboard auto-discovery), Node Exporters, `cnpg-cluster-metrics` PodMonitor, `microservices-monitor` ServiceMonitor, and `sre-slo-alerts` / `postgres-alerts` PrometheusRules.
 - [ ] Deploy **Grafana Tempo** in `sre-monitoring` for distributed trace storage.
 - [ ] Deploy **OpenTelemetry Collector** in `sre-monitoring` (routes OTLP traces $\rightarrow$ Tempo, metrics $\rightarrow$ Prometheus).
 - [ ] Deploy **Elasticsearch + Kibana + Fluent Bit** DaemonSet in `sre-logging`.

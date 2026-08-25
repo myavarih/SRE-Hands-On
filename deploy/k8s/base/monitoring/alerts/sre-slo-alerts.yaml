@@ -1,0 +1,42 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sre-slo-alerts
+  namespace: sre-monitoring
+  labels:
+    role: alert-rules
+spec:
+  groups:
+    - name: api-golden-signals
+      rules:
+        # P99 Latency SLO Alert (> 500ms for 2m)
+        - alert: HighP99LatencyBreach
+          expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route)) > 0.5
+          for: 2m
+          labels:
+            severity: warning
+            sre_tier: tier-1
+          annotations:
+            summary: "P99 Latency exceeded 500ms on route {{ $labels.route }}"
+            description: "P99 latency is currently {{ $value }}s on {{ $labels.route }}."
+
+        # 5xx Error Rate Alert (> 5% of total requests)
+        - alert: High5xxErrorRate
+          expr: sum(rate(http_requests_total{status=~"5.."}[2m])) / sum(rate(http_requests_total[2m])) > 0.05
+          for: 1m
+          labels:
+            severity: critical
+            sre_tier: tier-1
+          annotations:
+            summary: "5xx error rate exceeded 5% of all traffic"
+            description: "Service is experiencing high 5xx server errors (current error ratio: {{ $value }})."
+
+        # Gateway Rate Limit Rejection Surge
+        - alert: HighRateLimitRejectionRate
+          expr: sum(rate(gateway_rate_limit_rejections_total[2m])) > 10
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High rate limit rejections on API Gateway"
+            description: "Gateway is dropping {{ $value }} req/s due to rate limit threshold."

@@ -1,0 +1,63 @@
+# ==============================================================================
+# SRE Hands-On: Grafana Visualization & Auto-Provisioned Datasources
+# ==============================================================================
+
+grafana:
+  enabled: true
+  adminPassword: "prom-operator"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+  # Enable ConfigMap sidecar to auto-discover Grafana dashboards dynamically
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+      folderAnnotation: "grafana_folder"
+      provider:
+        disableDelete: false
+        foldersFromFilesStructure: true
+
+  # Pre-configure auxiliary full-stack datasources (Traces & Logs)
+  # (Prometheus is automatically provisioned with uid 'prometheus' by the chart)
+  additionalDataSources:
+    # 1. Grafana Tempo Distributed Traces (with Trace-to-Logs and Trace-to-Metrics)
+    - name: Tempo
+      type: tempo
+      uid: tempo
+      url: http://tempo.sre-monitoring:3100
+      access: proxy
+      isDefault: false
+      jsonData:
+        httpMethod: GET
+        tracesToMetrics:
+          datasourceUid: prometheus
+          tags: [{ key: 'service.name', value: 'job' }]
+          queries:
+            - name: 'Request rate'
+              query: 'sum(rate(http_requests_total{service_name=~"$${__tags}"}[1m]))'
+        tracesToLogs:
+          datasourceUid: elasticsearch
+          tags: ['trace_id']
+
+    # 2. Elasticsearch Pod Logs
+    - name: Elasticsearch
+      type: elasticsearch
+      uid: elasticsearch
+      url: http://elasticsearch.sre-logging:9200
+      access: proxy
+      isDefault: false
+      database: "fluent-bit-*"
+      jsonData:
+        timeField: "@timestamp"
+        esVersion: "8.0.0"
+        logMessageField: "message"
+        logLevelField: "level"

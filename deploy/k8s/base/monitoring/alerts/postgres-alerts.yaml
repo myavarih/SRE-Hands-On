@@ -1,0 +1,31 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: postgres-alerts
+  namespace: sre-monitoring
+  labels:
+    role: alert-rules
+spec:
+  groups:
+    - name: postgres-ha-alerts
+      rules:
+        # Standby Replica Disconnected
+        - alert: PostgresStandbyDisconnected
+          expr: cnpg_backends{application_name="pg-cluster-2"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            sre_tier: tier-0
+          annotations:
+            summary: "PostgreSQL Standby Replica is disconnected"
+            description: "Synchronous standby replica pg-cluster-2 is not streaming WAL from primary."
+
+        # High Active Connections (> 80% of max pool)
+        - alert: PostgresHighActiveConnections
+          expr: sum(cnpg_backends_total) by (instance) > 20
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PostgreSQL active connections nearing saturation"
+            description: "Instance {{ $labels.instance }} has {{ $value }} active connections."

@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: cnpg-cluster-metrics
+  namespace: sre-monitoring
+  labels:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/component: metrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - sre-data
+  selector:
+    matchLabels:
+      cnpg.io/cluster: pg-cluster
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 10s
+      scrapeTimeout: 5s

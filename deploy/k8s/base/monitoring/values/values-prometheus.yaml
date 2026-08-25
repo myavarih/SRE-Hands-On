@@ -1,0 +1,53 @@
+# ==============================================================================
+# SRE Hands-On: Prometheus Operator & Prometheus Server Configuration
+# ==============================================================================
+
+fullnameOverride: "k8s-monitoring"
+
+# 1. Prometheus Operator Controller
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# 2. Prometheus Server (TSDB Engine + Exemplar Support)
+prometheus:
+  prometheusSpec:
+    retention: 6h
+    # Enable OpenTelemetry Exemplars support in Prometheus TSDB
+    enableFeatures:
+      - exemplar-storage
+
+    # Allow Prometheus to discover ServiceMonitors & PodMonitors across ALL namespaces (sre-app, sre-data)
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+    # SRE tuned resource allocations
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: standard
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+# 3. Infrastructure Exporters
+nodeExporter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true

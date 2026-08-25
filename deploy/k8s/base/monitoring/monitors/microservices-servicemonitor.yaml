@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: microservices-monitor
+  namespace: sre-monitoring
+  labels:
+    app.kubernetes.io/name: sre-microservices
+    app.kubernetes.io/component: metrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - sre-app
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: sre-hands-on
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 10s
+      scrapeTimeout: 5s

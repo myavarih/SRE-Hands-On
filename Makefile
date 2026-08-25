@@ -109,6 +109,44 @@ db-shell: ## Open an interactive psql session to the primary PostgreSQL instance
 	@kubectl exec -it -n sre-data pg-cluster-1 -- bash -c 'PGPASSWORD=app_password psql -h localhost -U app_user -d app_db'
 
 # ==============================================================================
+# Observability & Monitoring (Prometheus, Alertmanager, Grafana)
+# ==============================================================================
+
+.PHONY: deploy-monitoring
+deploy-monitoring: ## Deploy/Upgrade kube-prometheus-stack, monitors, alerts, and dashboards
+	@echo "==> Deploying kube-prometheus-stack in sre-monitoring..."
+	@helm upgrade --install k8s-monitoring prometheus-community/kube-prometheus-stack \
+		--namespace sre-monitoring \
+		-f deploy/k8s/base/monitoring/values/values-prometheus.yaml \
+		-f deploy/k8s/base/monitoring/values/values-grafana.yaml \
+		-f deploy/k8s/base/monitoring/values/values-alertmanager.yaml
+	@echo "==> Applying Scrapers, Alert Rules, and Dashboards..."
+	@kubectl apply -f deploy/k8s/base/monitoring/monitors/
+	@kubectl apply -f deploy/k8s/base/monitoring/alerts/
+	@kubectl apply -f deploy/k8s/base/monitoring/dashboards/
+
+.PHONY: monitoring-status
+monitoring-status: ## Check status of all monitoring components in sre-monitoring
+	@echo "==> Monitoring Pods:"
+	@kubectl get pods -n sre-monitoring -o wide
+	@echo ""
+	@echo "==> PrometheusRules:"
+	@kubectl get prometheusrules -n sre-monitoring
+	@echo ""
+	@echo "==> ServiceMonitors & PodMonitors:"
+	@kubectl get servicemonitors,podmonitors -n sre-monitoring
+
+.PHONY: grafana-port-forward
+grafana-port-forward: ## Forward Grafana UI to localhost:3000 (admin / prom-operator)
+	@echo "==> Forwarding Grafana to http://localhost:3000 (admin / prom-operator)..."
+	@kubectl port-forward -n sre-monitoring svc/k8s-monitoring-grafana 3000:80
+
+.PHONY: prom-port-forward
+prom-port-forward: ## Forward Prometheus UI to localhost:9090
+	@echo "==> Forwarding Prometheus to http://localhost:9090..."
+	@kubectl port-forward -n sre-monitoring svc/k8s-monitoring-prometheus 9090:9090
+
+# ==============================================================================
 # Cleanup
 # ==============================================================================
 

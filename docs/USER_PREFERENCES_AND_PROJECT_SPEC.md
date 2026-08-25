@@ -112,6 +112,7 @@ This master document captures all architectural decisions, project requirements,
 | **`admin-gateway`** | **Done** | Gin REST Gateway with `v1/admin`, `v1/chaos`, and metrics. |
 | **Dockerfiles** | **Done** | Multi-stage Alpine container build files for all 5 services. |
 | **CNPG HA PostgreSQL** | **Done** | CloudNativePG v1.25.0, 2 instances (Primary on worker, Standby on worker2) with synchronous WAL streaming, `app_db`, `app_user`, and `pg-cluster-rw` / `pg-cluster-ro` services. |
+| **`kube-prometheus-stack`** | **Done** | Prometheus Operator, Prometheus Server (Exemplar storage + 2Gi PVC), Alertmanager (1Gi PVC), Grafana (with 3-pillar datasources & sidecar dashboards), Node Exporters, `cnpg-cluster-metrics` PodMonitor, `microservices-monitor` ServiceMonitor, and `sre-slo-alerts` / `postgres-alerts` PrometheusRules. |
 
 ---
 
