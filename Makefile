@@ -219,6 +219,42 @@ chaos-reset: ## Reset chaos faults in payment-service to nominal
 	@curl -s -X POST http://localhost/api/v1/admin/chaos/fault-injection -H "Content-Type: application/json" -d '{"latency_ms":0,"error_rate":0.0,"enabled":false}' | jq .
 
 # ==============================================================================
+# GitOps Delivery (ArgoCD)
+# ==============================================================================
+
+.PHONY: deploy-argocd
+deploy-argocd: ## Deploy ArgoCD v2.12.3 in the argocd namespace
+	@echo "==> Deploying ArgoCD..."
+	@kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.12.3/manifests/install.yaml
+	@kubectl patch configmap argocd-cmd-params-cm -n argocd --type merge -p '{"data":{"server.insecure":"true"}}'
+
+.PHONY: argocd-status
+argocd-status: ## Check status of all ArgoCD pods, services, and applications
+	@echo "==> ArgoCD Pods & Services:"
+	@kubectl get pods,svc -n argocd -o wide
+	@echo ""
+	@echo "==> ArgoCD Applications:"
+	@kubectl get applications.argoproj.io -n argocd 2>/dev/null || true
+
+.PHONY: argocd-password
+argocd-password: ## Retrieve the initial admin password for ArgoCD web UI
+	@echo "==> ArgoCD Admin Credentials:"
+	@echo "Username: admin"
+	@echo -n "Password: "
+	@kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+	@echo ""
+
+.PHONY: argocd-port-forward
+argocd-port-forward: ## Forward ArgoCD UI to http://localhost:8080 (or 30080)
+	@echo "==> Forwarding ArgoCD Server to http://localhost:30080..."
+	@kubectl port-forward -n argocd svc/argocd-server 30080:80
+
+.PHONY: deploy-gitops
+deploy-gitops: ## Apply declarative ArgoCD Root Application for continuous reconciliation
+	@echo "==> Applying ArgoCD Root Application..."
+	@kubectl apply -f deploy/k8s/argocd/root-application.yaml
+
+# ==============================================================================
 # Cleanup
 # ==============================================================================
 

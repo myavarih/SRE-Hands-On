@@ -58,10 +58,11 @@ This document captures the project's exact architectural state, conventions, use
   - Structured JSON logs emitted by slog with `trace_id` and `span_id` are ingested by Fluent Bit DaemonSet and searchable in Elasticsearch.
   - SRE Chaos fault injection verified: 1500ms injected delay in `payment-service` accurately recorded across metrics, traces, and logs.
 
-### Phase 5: GitOps Delivery with ArgoCD
-- Deploy **ArgoCD** in `argocd` namespace.
-- Create declarative **Kustomize** base and overlays (`deploy/k8s/base` & `deploy/k8s/overlays/local-kind`).
-- Register ArgoCD root application pointing to `https://github.com/myavarih/SRE-Hands-On.git` for auto-reconciliation.
+### Phase 5: GitOps Delivery with ArgoCD (COMPLETE)
+- [x] **Kustomize Hierarchy Base & Overlays** (`deploy/k8s/base/kustomization.yaml`, `deploy/k8s/overlays/local-kind/kustomization.yaml`): Fully declarative aggregation of namespaces, data, monitoring, logging, apps, and ingress resources.
+- [x] **ArgoCD v2.12.3 Deployment** (`argocd` namespace): All 7 components (`argocd-server`, `argocd-application-controller`, `argocd-repo-server`, `argocd-redis`, `argocd-dex-server`, `argocd-notifications-controller`, `argocd-applicationset-controller`) healthy and running in insecure server mode.
+- [x] **Declarative Root Application** (`deploy/k8s/argocd/root-application.yaml`): App-of-Apps root application pointing to `https://github.com/myavarih/SRE-Hands-On.git` with automated sync, prune, and self-healing.
+- [x] **Developer Makefile GitOps Targets**: `deploy-argocd`, `argocd-status`, `argocd-password`, `argocd-port-forward`, `deploy-gitops`.
 
 ### Phase 6: SRE Scenarios, Load Testing & Chaos Drills
 - Run **k6** load testing via Docker / Kubernetes Jobs to simulate traffic surges.

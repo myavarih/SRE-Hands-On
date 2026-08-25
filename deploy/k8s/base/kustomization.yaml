@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # 1. Namespaces
+  - namespaces.yaml
+
+  # 2. Data Layer (HA PostgreSQL CloudNativePG)
+  - data/postgres-secret.yaml
+  - data/postgres-cluster.yaml
+
+  # 3. Observability - Monitors, Alerts, Dashboards & Tracing
+  - monitoring/monitors/cnpg-podmonitor.yaml
+  - monitoring/monitors/microservices-servicemonitor.yaml
+  - monitoring/alerts/sre-slo-alerts.yaml
+  - monitoring/alerts/postgres-alerts.yaml
+  - monitoring/dashboards/microservices-dashboard.yaml
+  - monitoring/tracing/tempo.yaml
+  - monitoring/tracing/otel-collector.yaml
+
+  # 4. Logging Layer (EFK Stack)
+  - logging/elasticsearch.yaml
+  - logging/fluent-bit.yaml
+  - logging/kibana.yaml
+
+  # 5. Microservices & Gateways Application Layer
+  - apps/auth-service.yaml
+  - apps/order-service.yaml
+  - apps/payment-service.yaml
+  - apps/storefront-gateway.yaml
+  - apps/admin-gateway.yaml
+  - apps/frontend.yaml
+
+  # 6. Ingress Routing Layer
+  - ingress/ingress.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: sre-hands-on

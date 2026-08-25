@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sre-hands-on-root
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: sre-hands-on-root
+    app.kubernetes.io/part-of: sre-hands-on
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/myavarih/SRE-Hands-On.git
+    targetRevision: main
+    path: deploy/k8s/overlays/local-kind
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sre-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true

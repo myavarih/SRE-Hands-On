@@ -118,6 +118,7 @@ This master document captures all architectural decisions, project requirements,
 | **Microservices Deployments** | **Done** | Declarative Deployment & Service manifests for `auth-service`, `order-service`, `payment-service`, `storefront-gateway`, `admin-gateway` in `sre-app`. |
 | **Frontend UI & Ingress** | **Done** | Vanilla HTML5/JS dashboard frontend on port 80, NGINX Ingress routes for `/`, `/api/v1/store/`, `/api/v1/admin/`. |
 | **3-Pillar Correlation** | **Done** | Verified: Prometheus metrics, Tempo distributed traces (`storefront` $\to$ `order` $\to$ `payment`), Elasticsearch logs enriched with `trace_id` & `span_id`, SRE Chaos fault injection. |
+| **GitOps with ArgoCD** | **Done** | Kustomize base & local-kind overlay hierarchy, ArgoCD v2.12.3 in `argocd`, declarative App-of-Apps root application with automated reconciliation & self-healing. |
 
 ---
 
