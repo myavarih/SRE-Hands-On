@@ -345,9 +345,3 @@ make cluster-down
 │       └── argocd/            # ArgoCD GitOps Root Application & App-of-Apps
 └── Makefile                   # Developer orchestration lifecycle targets
 ```
-
----
-
-## 6. License
-
-This project is licensed under the Apache 2.0 License.
