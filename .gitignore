@@ -29,3 +29,9 @@ go.work
 # OS artifacts
 .DS_Store
 Thumbs.db
+
+# Agent, learning & internal graph artifacts
+.learnings/
+AGENTS.md
+graphify-out/
+docs/learning/
