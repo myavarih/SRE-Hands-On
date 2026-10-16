@@ -1,6 +1,7 @@
 SHELL        := /usr/bin/env bash
 CLUSTER_NAME := sre-lab
 SERVICES     := storefront-gateway admin-gateway auth-service order-service payment-service frontend
+VERSION      ?= v1.0.0
 
 .PHONY: help
 help: ## Show this help message
@@ -67,19 +68,22 @@ test: ## Run unit tests with race condition detector and coverage
 docker-build: ## Build Docker images for all microservices locally
 	@for svc in $(SERVICES); do \
 		if [ -f services/$$svc/Dockerfile ]; then \
-			echo "==> Building Docker image [$$svc:latest]..."; \
-			docker build -t $$svc:latest -f services/$$svc/Dockerfile .; \
+			echo "==> Building Docker image [$$svc:$(VERSION)] and [$$svc:latest]..."; \
+			docker build -t $$svc:$(VERSION) -t $$svc:latest -f services/$$svc/Dockerfile .; \
 		elif [ -f frontend/Dockerfile ] && [ "$$svc" = "frontend" ]; then \
-			echo "==> Building Docker image [frontend:latest]..."; \
-			docker build -t frontend:latest -f frontend/Dockerfile frontend; \
+			echo "==> Building Docker image [frontend:$(VERSION)] and [frontend:latest]..."; \
+			docker build -t frontend:$(VERSION) -t frontend:latest -f frontend/Dockerfile frontend; \
 		fi \
 	done
 
 .PHONY: kind-load
 kind-load: ## Sideload built local Docker images into Kind cluster nodes
 	@for svc in $(SERVICES); do \
+		if docker image inspect $$svc:$(VERSION) &>/dev/null; then \
+			echo "==> Loading $$svc:$(VERSION) into Kind cluster..."; \
+			kind load docker-image $$svc:$(VERSION) --name $(CLUSTER_NAME); \
+		fi; \
 		if docker image inspect $$svc:latest &>/dev/null; then \
-			echo "==> Loading $$svc:latest into Kind cluster..."; \
 			kind load docker-image $$svc:latest --name $(CLUSTER_NAME); \
 		fi \
 	done
@@ -91,7 +95,7 @@ kind-load: ## Sideload built local Docker images into Kind cluster nodes
 .PHONY: deploy-db
 deploy-db: ## Apply PostgreSQL user secret and HA cluster manifests
 	@echo "==> Applying PostgreSQL Secret & Cluster in sre-data..."
-	@kubectl apply -f deploy/k8s/base/data/postgres-secret.yaml
+	@kubectl apply -f deploy/k8s/overlays/local-kind/local-secrets.yaml
 	@kubectl apply -f deploy/k8s/base/data/postgres-cluster.yaml
 	@echo "==> Waiting for PostgreSQL HA Cluster [pg-cluster] to become ready..."
 	@kubectl wait --namespace sre-data --for=condition=Ready cluster/pg-cluster --timeout=180s || true
@@ -117,6 +121,8 @@ db-shell: ## Open an interactive psql session to the primary PostgreSQL instance
 
 .PHONY: deploy-monitoring
 deploy-monitoring: ## Deploy/Upgrade kube-prometheus-stack, monitors, alerts, and dashboards
+	@echo "==> Applying Secrets in sre-monitoring..."
+	@kubectl apply -f deploy/k8s/overlays/local-kind/local-secrets.yaml
 	@echo "==> Deploying kube-prometheus-stack in sre-monitoring..."
 	@helm upgrade --install k8s-monitoring prometheus-community/kube-prometheus-stack \
 		--namespace sre-monitoring \
@@ -150,6 +156,11 @@ prom-port-forward: ## Forward Prometheus UI to localhost:9090
 	@echo "==> Forwarding Prometheus to http://localhost:9090..."
 	@kubectl port-forward -n sre-monitoring svc/k8s-monitoring-prometheus 9090:9090
 
+.PHONY: alertmanager-port-forward
+alertmanager-port-forward: ## Forward Alertmanager UI to localhost:9093
+	@echo "==> Forwarding Alertmanager to http://localhost:9093..."
+	@kubectl port-forward -n sre-monitoring svc/k8s-monitoring-alertmanager 9093:9093
+
 # ==============================================================================
 # Logging Layer (Elasticsearch, Fluent Bit, Kibana)
 # ==============================================================================
@@ -157,6 +168,7 @@ prom-port-forward: ## Forward Prometheus UI to localhost:9090
 .PHONY: deploy-logging
 deploy-logging: ## Deploy Elasticsearch, Fluent Bit DaemonSet, and Kibana in sre-logging
 	@echo "==> Deploying Logging Stack in sre-logging..."
+	@kubectl delete job kibana-setup -n sre-logging --ignore-not-found=true
 	@kubectl apply -f deploy/k8s/base/logging/
 
 .PHONY: logging-status

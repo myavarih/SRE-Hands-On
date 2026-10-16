@@ -1,0 +1,113 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kibana-setup
+  namespace: sre-logging
+  labels:
+    app.kubernetes.io/name: kibana-setup
+    app.kubernetes.io/component: logging
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 12
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kibana-setup
+        app.kubernetes.io/component: logging
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: setup
+          image: docker.io/kibana:8.14.3
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -e
+              KIBANA_URL="http://kibana.sre-logging.svc.cluster.local:5601"
+              ES_URL="http://elasticsearch.sre-logging.svc.cluster.local:9200"
+
+              echo "Configuring Elasticsearch runtime field 'message' mapping for Fluent Bit..."
+              curl -s -X PUT -H "Content-Type: application/json" -d '{
+                "index_patterns": ["fluent-bit-*"],
+                "template": {
+                  "mappings": {
+                    "runtime": {
+                      "message": {
+                        "type": "keyword",
+                        "script": {
+                          "source": "if (params._source.msg != null) { emit(params._source.msg); } else if (params._source.log != null) { emit(params._source.log); }"
+                        }
+                      }
+                    }
+                  }
+                },
+                "priority": 100
+              }' "${ES_URL}/_index_template/fluent-bit-template"
+
+              curl -s -X PUT -H "Content-Type: application/json" -d '{
+                "runtime": {
+                  "message": {
+                    "type": "keyword",
+                    "script": {
+                      "source": "if (params._source.msg != null) { emit(params._source.msg); } else if (params._source.log != null) { emit(params._source.log); }"
+                    }
+                  }
+                }
+              }' "${ES_URL}/fluent-bit-*/_mapping" || true
+
+              echo "Waiting for Kibana at ${KIBANA_URL}..."
+              until curl -s -f "${KIBANA_URL}/api/status" > /dev/null; do
+                echo "Kibana not ready yet, retrying in 5s..."
+                sleep 5
+              done
+
+              echo "Kibana is healthy. Checking if Data View 'fluent-bit-*' exists..."
+              EXISTING=$(curl -s -H "kbn-xsrf: true" "${KIBANA_URL}/api/data_views")
+
+              if echo "${EXISTING}" | grep -q '"title":"fluent-bit-\*"'; then
+                echo "Data View 'fluent-bit-*' already exists."
+              else
+                echo "Creating Data View for 'fluent-bit-*'..."
+                RESP=$(curl -s -X POST "${KIBANA_URL}/api/data_views/data_view" \
+                  -H "kbn-xsrf: true" \
+                  -H "Content-Type: application/json" \
+                  -d '{
+                    "data_view": {
+                      "title": "fluent-bit-*",
+                      "name": "Fluent Bit Logs",
+                      "timeFieldName": "@timestamp"
+                    }
+                  }')
+
+                DV_ID=$(echo "${RESP}" | grep -o '"id":"[^"]*"' | head -n 1 | cut -d'"' -f4)
+                if [ -n "${DV_ID}" ]; then
+                  echo "Setting '${DV_ID}' as default Data View..."
+                  curl -s -X POST "${KIBANA_URL}/api/data_views/default" \
+                    -H "kbn-xsrf: true" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"data_view_id\":\"${DV_ID}\"}"
+                fi
+              fi
+
+              echo "Configuring Observability Log Stream view settings..."
+              curl -s -X PUT "${KIBANA_URL}/api/infra/log_views/default" \
+                -H "kbn-xsrf: true" \
+                -H "elastic-api-version: 1" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "attributes": {
+                    "name": "Default",
+                    "description": "Default log view for Fluent Bit and Kubernetes",
+                    "logIndices": {
+                      "type": "index_name",
+                      "indexName": "fluent-bit-*,logs-*,filebeat-*"
+                    },
+                    "logColumns": [
+                      {"timestampColumn": {"id": "timestamp-col"}},
+                      {"fieldColumn": {"id": "container-col", "field": "kubernetes.container_name"}},
+                      {"messageColumn": {"id": "msg-col"}}
+                    ]
+                  }
+                }'
+
+              echo "==> Kibana bootstrap successfully completed!"

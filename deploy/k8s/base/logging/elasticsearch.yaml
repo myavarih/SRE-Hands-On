@@ -25,6 +25,8 @@ spec:
           command: ["sysctl", "-w", "vm.max_map_count=262144"]
           securityContext:
             privileged: true
+            capabilities:
+              add: ["SYS_ADMIN"]
       containers:
         - name: elasticsearch
           image: docker.io/elasticsearch:8.14.3
