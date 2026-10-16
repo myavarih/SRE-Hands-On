@@ -6,7 +6,11 @@ import (
 )
 
 var (
-	// HTTPRequestsTotal tracks total HTTP requests partitioned by path, method, and status code.
+	// HTTPRequestsTotal tracks total HTTP requests partitioned by service, handler, method, and status code.
+	// Used to compute Throughput (Rate) and Error Ratio in the RED Method.
+	// PromQL Throughput: sum(rate(http_requests_total[1m])) by (service, handler)
+	// PromQL Error Rate:  sum(rate(http_requests_total{status=~"5.."}[1m])) / sum(rate(http_requests_total[1m]))
+	// Note: See docs/learning/05-OBSERVABILITY-METRICS.md and Flaw F-03 for label alignment.
 	HTTPRequestsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
@@ -15,7 +19,9 @@ var (
 		[]string{"service", "handler", "method", "status"},
 	)
 
-	// HTTPRequestDuration tracks latency of HTTP requests in seconds.
+	// HTTPRequestDuration tracks latency of HTTP requests in seconds across cumulative buckets.
+	// Used to compute Latency Percentiles (P50, P90, P99) in the RED Method.
+	// PromQL P99: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[2m])) by (le, service))
 	HTTPRequestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "http_request_duration_seconds",
@@ -25,7 +31,8 @@ var (
 		[]string{"service", "handler", "method", "status"},
 	)
 
-	// GRPCRequestsTotal tracks total gRPC server calls.
+	// GRPCRequestsTotal tracks total completed gRPC server calls.
+	// Provides internal service-to-service east-west traffic observability.
 	GRPCRequestsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "grpc_server_handled_total",
@@ -34,7 +41,7 @@ var (
 		[]string{"grpc_service", "grpc_method", "grpc_code"},
 	)
 
-	// GRPCHandlingDuration tracks latency of gRPC server calls in seconds.
+	// GRPCHandlingDuration tracks latency of internal gRPC server calls in seconds.
 	GRPCHandlingDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "grpc_server_handling_seconds",
@@ -44,7 +51,8 @@ var (
 		[]string{"grpc_service", "grpc_method", "grpc_code"},
 	)
 
-	// RateLimitRejections tracks rate limit drops at the gateway.
+	// RateLimitRejections tracks rate limit drops at the gateway (Token Bucket exhaustion).
+	// Serves as a key Saturation and Abuse indicator for API Gateways.
 	RateLimitRejections = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "gateway_rate_limit_rejections_total",

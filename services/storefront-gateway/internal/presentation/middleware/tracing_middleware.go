@@ -12,6 +12,12 @@ func TracingMiddleware(serviceName string) gin.HandlerFunc {
 	propagator := otel.GetTextMapPropagator()
 
 	return func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if path == "/healthz" || path == "/metrics" {
+			c.Next()
+			return
+		}
+
 		// 1. Extract context from incoming HTTP headers
 		ctx := propagator.Extract(c.Request.Context(), propagation.HeaderCarrier(c.Request.Header))
 

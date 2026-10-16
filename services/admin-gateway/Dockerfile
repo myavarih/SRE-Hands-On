@@ -9,5 +9,6 @@ FROM alpine:3.20
 RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /app
 COPY --from=builder /bin/admin-gateway /app/admin-gateway
+USER 65534:65534
 EXPOSE 8081 9090
 ENTRYPOINT ["/app/admin-gateway"]

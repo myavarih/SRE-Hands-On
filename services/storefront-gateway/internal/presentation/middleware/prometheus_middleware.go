@@ -6,6 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/myavarih/sre-hands-on/pkg/telemetry"
+	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func PrometheusMiddleware(serviceName string) gin.HandlerFunc {
@@ -23,6 +25,18 @@ func PrometheusMiddleware(serviceName string) gin.HandlerFunc {
 		method := c.Request.Method
 
 		telemetry.HTTPRequestsTotal.WithLabelValues(serviceName, handler, method, status).Inc()
-		telemetry.HTTPRequestDuration.WithLabelValues(serviceName, handler, method, status).Observe(duration)
+
+		// Record Prometheus metric with OpenTelemetry trace_id exemplar (Flaw F-08 fix)
+		observer := telemetry.HTTPRequestDuration.WithLabelValues(serviceName, handler, method, status)
+		span := trace.SpanFromContext(c.Request.Context())
+		if span.SpanContext().IsValid() {
+			if exemplarObserver, ok := observer.(prometheus.ExemplarObserver); ok {
+				exemplarObserver.ObserveWithExemplar(duration, prometheus.Labels{
+					"trace_id": span.SpanContext().TraceID().String(),
+				})
+				return
+			}
+		}
+		observer.Observe(duration)
 	}
 }

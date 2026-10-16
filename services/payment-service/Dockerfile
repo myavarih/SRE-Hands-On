@@ -9,5 +9,6 @@ FROM alpine:3.20
 RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /app
 COPY --from=builder /bin/payment-service /app/payment-service
+USER 65534:65534
 EXPOSE 50053 9090
 ENTRYPOINT ["/app/payment-service"]

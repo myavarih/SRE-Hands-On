@@ -13,6 +13,7 @@ import (
 	"github.com/myavarih/sre-hands-on/pkg/exceptions"
 	"github.com/myavarih/sre-hands-on/pkg/ports"
 	"github.com/myavarih/sre-hands-on/services/payment-service/internal/application/dto"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type PaymentUseCase interface {
@@ -78,18 +79,31 @@ func (uc *paymentUseCase) ProcessPayment(ctx context.Context, input dto.ProcessP
 		return nil, err
 	}
 
-	// 3. Asynchronously record notification dispatch
+	// 3. Asynchronously record notification dispatch with safe string slicing and trace context propagation (Flaw F-25 fix)
+	spanCtx := trace.SpanContextFromContext(ctx)
 	go func() {
 		bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+		if spanCtx.IsValid() {
+			bgCtx = trace.ContextWithSpanContext(bgCtx, spanCtx)
+		}
+
+		userPrefix := input.UserID
+		if len(userPrefix) > 8 {
+			userPrefix = userPrefix[:8]
+		}
+		recipientEmail := fmt.Sprintf("user-%s@example.com", userPrefix)
+
 		notif := &entities.Notification{
 			UserID:    input.UserID,
-			Recipient: fmt.Sprintf("user-%s@example.com", input.UserID[:8]),
+			Recipient: recipientEmail,
 			Channel:   "EMAIL",
 			Message:   fmt.Sprintf("Payment of $%.2f confirmed for Order %s", float64(input.AmountCents)/100.0, input.OrderID),
 			Status:    "SENT",
 		}
-		_ = uc.uow.Notifications().Create(bgCtx, notif)
+		if notifErr := uc.uow.Notifications().Create(bgCtx, notif); notifErr != nil {
+			uc.logger.Warn("Failed to create async payment notification record", "error", notifErr, "user_id", input.UserID)
+		}
 	}()
 
 	uc.logger.Info("Payment processed successfully", "payment_id", payment.ID, "order_id", input.OrderID, "amount_cents", input.AmountCents)

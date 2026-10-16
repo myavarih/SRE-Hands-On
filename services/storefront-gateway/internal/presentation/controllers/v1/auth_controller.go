@@ -47,7 +47,7 @@ func (c *AuthController) Register(ctx *gin.Context) {
 	if err != nil {
 		c.logger.Warn("Register RPC failed", "error", err)
 		dErr := exceptions.FromGRPCError(err)
-		controllers.RespondError(ctx, http.StatusBadRequest, dErr.Error(), "")
+		controllers.RespondError(ctx, exceptions.HTTPStatusCode(dErr), dErr.Error(), "")
 		return
 	}
 

@@ -10,4 +10,5 @@ RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /app
 COPY --from=builder /bin/storefront-gateway /app/storefront-gateway
 EXPOSE 8080 9090
+USER 65534:65534
 ENTRYPOINT ["/app/storefront-gateway"]

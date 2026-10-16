@@ -9,5 +9,6 @@ FROM alpine:3.20
 RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /app
 COPY --from=builder /bin/auth-service /app/auth-service
+USER 65534:65534
 EXPOSE 50051 9090
 ENTRYPOINT ["/app/auth-service"]

@@ -3,6 +3,7 @@ package exceptions
 import (
 	"errors"
 	"fmt"
+	"net/http"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -104,4 +105,61 @@ func FromGRPCError(err error) error {
 	default:
 		return NewInternalError(st.Message(), err)
 	}
+}
+
+// HTTPStatusCode maps domain errors or gRPC status errors to their semantic HTTP status code (Flaw F-20 fix).
+func HTTPStatusCode(err error) int {
+	if err == nil {
+		return http.StatusOK
+	}
+
+	var dErr *DomainError
+	if errors.As(err, &dErr) {
+		switch dErr.Code {
+		case codes.InvalidArgument:
+			return http.StatusBadRequest
+		case codes.Unauthenticated:
+			return http.StatusUnauthorized
+		case codes.PermissionDenied:
+			return http.StatusForbidden
+		case codes.NotFound:
+			return http.StatusNotFound
+		case codes.AlreadyExists, codes.FailedPrecondition, codes.Aborted:
+			return http.StatusConflict
+		case codes.ResourceExhausted:
+			return http.StatusTooManyRequests
+		case codes.DeadlineExceeded:
+			return http.StatusGatewayTimeout
+		case codes.Unavailable:
+			return http.StatusServiceUnavailable
+		default:
+			return http.StatusInternalServerError
+		}
+	}
+
+	st, ok := status.FromError(err)
+	if ok {
+		switch st.Code() {
+		case codes.InvalidArgument:
+			return http.StatusBadRequest
+		case codes.Unauthenticated:
+			return http.StatusUnauthorized
+		case codes.PermissionDenied:
+			return http.StatusForbidden
+		case codes.NotFound:
+			return http.StatusNotFound
+		case codes.AlreadyExists, codes.FailedPrecondition, codes.Aborted:
+			return http.StatusConflict
+		case codes.ResourceExhausted:
+			return http.StatusTooManyRequests
+		case codes.DeadlineExceeded:
+			return http.StatusGatewayTimeout
+		case codes.Unavailable:
+			return http.StatusServiceUnavailable
+		default:
+			return http.StatusInternalServerError
+		}
+	}
+
+	return http.StatusInternalServerError
 }

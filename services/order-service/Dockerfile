@@ -9,5 +9,6 @@ FROM alpine:3.20
 RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /app
 COPY --from=builder /bin/order-service /app/order-service
+USER 65534:65534
 EXPOSE 50052 9090
 ENTRYPOINT ["/app/order-service"]

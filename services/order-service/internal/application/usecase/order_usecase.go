@@ -99,6 +99,14 @@ func (uc *orderUseCase) CreateProduct(ctx context.Context, input dto.CreateProdu
 	}, nil
 }
 
+// CreateOrder orchestrates the distributed checkout transaction via the Saga Pattern.
+// Saga Lifecycle:
+//   Step 1: Local DB Transaction -> Deduct inventory & create order in PENDING status.
+//   Step 2: Inter-Service RPC    -> Call payment-service to capture charge.
+//   Step 3: Compensation Logic   -> If payment fails, restore inventory & set status to FAILED.
+//   Step 4: Confirmation        -> If payment succeeds, update status to COMPLETED with transaction ref.
+//
+// See docs/learning/04-GO-BACKEND-DEEP-DIVE.md for details and Flaw F-06 regarding saga durability.
 func (uc *orderUseCase) CreateOrder(ctx context.Context, input dto.CreateOrderInput) (*dto.OrderDTO, error) {
 	if input.UserID == "" || len(input.Items) == 0 {
 		return nil, exceptions.NewValidationError("user_id and at least one order item are required")
@@ -109,7 +117,7 @@ func (uc *orderUseCase) CreateOrder(ctx context.Context, input dto.CreateOrderIn
 	orderItems := make([]entities.OrderItem, 0, len(input.Items))
 	itemDTOs := make([]dto.OrderItemDTO, 0, len(input.Items))
 
-	// Step 1: Atomic Transaction (Deduct Stock & Create Order in PENDING)
+	// Step 1: Atomic Local Transaction (Deduct Stock & Create Order in PENDING)
 	err := uc.uow.WithTransaction(ctx, func(rf ports.RepositoryFactory) error {
 		for _, item := range input.Items {
 			if item.Quantity <= 0 {
@@ -121,6 +129,7 @@ func (uc *orderUseCase) CreateOrder(ctx context.Context, input dto.CreateOrderIn
 				return exceptions.NewNotFoundError(fmt.Sprintf("product not found: %s", item.ProductID))
 			}
 
+			// Atomic row-level SQL deduction prevents race conditions & overselling
 			if err := rf.Products().DeductStock(ctx, item.ProductID, item.Quantity); err != nil {
 				return err
 			}
@@ -158,7 +167,7 @@ func (uc *orderUseCase) CreateOrder(ctx context.Context, input dto.CreateOrderIn
 		return nil, err
 	}
 
-	// Step 2: Call Payment Service via gRPC
+	// Step 2: Call Payment Service via outbound gRPC with bounded 10s timeout
 	payCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -169,21 +178,31 @@ func (uc *orderUseCase) CreateOrder(ctx context.Context, input dto.CreateOrderIn
 		PaymentMethod: input.PaymentMethod,
 	})
 
-	// Step 3: Handle Payment Outcome
+	// Step 3: Handle Payment Outcome & Execute Saga Compensation
 	if payErr != nil || payResp.GetStatus() != "SUCCESS" {
-		uc.logger.Error("Payment failed for order, restoring stock", "order_id", createdOrder.ID, "error", payErr)
+		uc.logger.Error("Payment failed for order, executing compensation", "order_id", createdOrder.ID, "error", payErr)
 
-		// Compensation: Restore deducted stock and mark order as FAILED
-		for _, item := range orderItems {
-			_ = uc.uow.Products().AddStock(ctx, item.ProductID, item.Quantity)
+		// Compensation: Restore deducted stock and mark order as FAILED atomically
+		compErr := uc.uow.WithTransaction(ctx, func(rf ports.RepositoryFactory) error {
+			for _, item := range orderItems {
+				if addErr := rf.Products().AddStock(ctx, item.ProductID, item.Quantity); addErr != nil {
+					return fmt.Errorf("failed to restore stock for product %s: %w", item.ProductID, addErr)
+				}
+			}
+			return rf.Orders().UpdateStatus(ctx, createdOrder.ID, entities.OrderStatusFailed, "")
+		})
+		if compErr != nil {
+			uc.logger.Error("CRITICAL: Saga compensation failed! Potential inventory/order state inconsistency", "order_id", createdOrder.ID, "compensation_error", compErr)
 		}
-		_ = uc.uow.Orders().UpdateStatus(ctx, createdOrder.ID, entities.OrderStatusFailed, "")
 
 		return nil, exceptions.NewInternalError("payment processing failed, stock restored", payErr)
 	}
 
-	// Step 4: Confirm Order
-	_ = uc.uow.Orders().UpdateStatus(ctx, createdOrder.ID, entities.OrderStatusCompleted, payResp.GetTransactionRef())
+	// Step 4: Confirm Order & Record Payment Reference
+	if updateErr := uc.uow.Orders().UpdateStatus(ctx, createdOrder.ID, entities.OrderStatusCompleted, payResp.GetTransactionRef()); updateErr != nil {
+		uc.logger.Error("Failed to update order status to COMPLETED after successful payment", "order_id", createdOrder.ID, "transaction_ref", payResp.GetTransactionRef(), "error", updateErr)
+		return nil, exceptions.NewInternalError("order completed but failed to persist completion status", updateErr)
+	}
 	uc.logger.Info("Order confirmed successfully", "order_id", createdOrder.ID, "total_cents", totalPriceCents)
 
 	return &dto.OrderDTO{

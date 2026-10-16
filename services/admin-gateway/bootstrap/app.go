@@ -12,6 +12,7 @@ import (
 	paymentv1 "github.com/myavarih/sre-hands-on/services/gen/go/payment/v1"
 	v1 "github.com/myavarih/sre-hands-on/services/admin-gateway/internal/presentation/controllers/v1"
 	"github.com/myavarih/sre-hands-on/services/admin-gateway/internal/presentation/routes"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -37,19 +38,31 @@ func InitializeApp(ctx context.Context) (*App, error) {
 	}
 
 	// 2. Outbound gRPC Connections
-	authConn, err := grpc.NewClient(env.AuthServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	authConn, err := grpc.NewClient(
+		env.AuthServiceAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial auth-service: %w", err)
 	}
 	authClient := authv1.NewAuthServiceClient(authConn)
 
-	orderConn, err := grpc.NewClient(env.OrderServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	orderConn, err := grpc.NewClient(
+		env.OrderServiceAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial order-service: %w", err)
 	}
 	orderClient := orderv1.NewOrderServiceClient(orderConn)
 
-	paymentConn, err := grpc.NewClient(env.PaymentServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	paymentConn, err := grpc.NewClient(
+		env.PaymentServiceAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial payment-service: %w", err)
 	}

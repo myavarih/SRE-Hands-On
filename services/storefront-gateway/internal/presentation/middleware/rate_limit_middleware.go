@@ -2,39 +2,36 @@ package middleware
 
 import (
 	"net/http"
-	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/myavarih/sre-hands-on/pkg/telemetry"
 	"github.com/myavarih/sre-hands-on/services/storefront-gateway/internal/presentation/controllers"
 	"golang.org/x/time/rate"
 )
 
 type IPRateLimiter struct {
-	ips map[string]*rate.Limiter
-	mu  sync.RWMutex
-	r   rate.Limit
-	b   int
+	limiters *expirable.LRU[string, *rate.Limiter]
+	r        rate.Limit
+	b        int
 }
 
 func NewIPRateLimiter(r rate.Limit, b int) *IPRateLimiter {
 	return &IPRateLimiter{
-		ips: make(map[string]*rate.Limiter),
-		r:   r,
-		b:   b,
+		// 10,000 max cached IP limiters with automatic 10-minute TTL expiration (Flaw F-18 fix)
+		limiters: expirable.NewLRU[string, *rate.Limiter](10000, nil, 10*time.Minute),
+		r:        r,
+		b:        b,
 	}
 }
 
 func (i *IPRateLimiter) getLimiter(ip string) *rate.Limiter {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-
-	limiter, exists := i.ips[ip]
+	limiter, exists := i.limiters.Get(ip)
 	if !exists {
 		limiter = rate.NewLimiter(i.r, i.b)
-		i.ips[ip] = limiter
+		i.limiters.Add(ip, limiter)
 	}
-
 	return limiter
 }
 

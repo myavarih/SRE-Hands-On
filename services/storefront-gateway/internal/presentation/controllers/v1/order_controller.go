@@ -65,7 +65,7 @@ func (c *OrderController) CreateOrder(ctx *gin.Context) {
 	if err != nil {
 		c.logger.Error("CreateOrder RPC failed", "error", err, "user_id", userID)
 		dErr := exceptions.FromGRPCError(err)
-		controllers.RespondError(ctx, http.StatusBadRequest, dErr.Error(), "")
+		controllers.RespondError(ctx, exceptions.HTTPStatusCode(dErr), dErr.Error(), "")
 		return
 	}
 
@@ -97,6 +97,15 @@ func (c *OrderController) GetOrder(ctx *gin.Context) {
 		return
 	}
 
+	userID, err := controllers.GetUserID(ctx)
+	if err != nil {
+		controllers.RespondError(ctx, http.StatusUnauthorized, "Unauthorized", err.Error())
+		return
+	}
+
+	userRole, _ := ctx.Get("role")
+	roleStr, _ := userRole.(string)
+
 	reqCtx, cancel := context.WithTimeout(ctx.Request.Context(), 5*time.Second)
 	defer cancel()
 
@@ -105,6 +114,12 @@ func (c *OrderController) GetOrder(ctx *gin.Context) {
 	})
 	if err != nil {
 		controllers.RespondError(ctx, http.StatusNotFound, "Order not found", "")
+		return
+	}
+
+	// IDOR Protection: verify requesting user owns the order or has admin role (Flaw F-12 fix)
+	if resp.GetUserId() != userID && roleStr != "admin" {
+		controllers.RespondError(ctx, http.StatusForbidden, "Access denied to requested order", "")
 		return
 	}
 
