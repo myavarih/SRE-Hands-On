@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: admin-gateway
   namespace: sre-app
+  annotations:
+    reloader.stakater.com/auto: "true"
   labels:
     app.kubernetes.io/name: admin-gateway
     app.kubernetes.io/part-of: sre-hands-on
@@ -21,7 +23,7 @@ spec:
     spec:
       containers:
         - name: admin-gateway
-          image: admin-gateway:latest
+          image: admin-gateway:v1.0.0
           imagePullPolicy: IfNotPresent
           env:
             - name: SERVICE_NAME
@@ -35,9 +37,15 @@ spec:
             - name: PAYMENT_SERVICE_ADDR
               value: "payment-service.sre-app.svc.cluster.local:50053"
             - name: JWT_SECRET
-              value: "sre-super-secret-jwt-key-change-in-prod"
+              valueFrom:
+                secretKeyRef:
+                  name: sre-app-secrets
+                  key: JWT_SECRET
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "otel-collector.sre-monitoring.svc.cluster.local:4317"
+              valueFrom:
+                configMapKeyRef:
+                  name: common-app-config
+                  key: OTEL_EXPORTER_OTLP_ENDPOINT
           ports:
             - name: http
               containerPort: 8081
@@ -48,6 +56,18 @@ spec:
             limits:
               cpu: 200m
               memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service

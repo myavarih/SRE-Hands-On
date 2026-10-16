@@ -18,6 +18,9 @@ prometheusOperator:
 prometheus:
   prometheusSpec:
     retention: 6h
+    # External labels tag all scraped metrics with cluster identity, required by Grafana Kubernetes dashboards
+    externalLabels:
+      cluster: sre-lab
     # Enable OpenTelemetry Exemplars support in Prometheus TSDB
     enableFeatures:
       - exemplar-storage

@@ -1,8 +1,16 @@
+# ==============================================================================
+# SRE Hands-On Lab: 3-Node Kind Cluster Topology
+# ==============================================================================
+# WHY a 3-node cluster instead of single-node?
+# Single-node clusters cannot reproduce production failure domains: pod anti-affinity,
+# zone-aware scheduling, node draining, network partitions, and HA database failovers.
+# See docs/learning/01-BIG-PICTURE.md and 02-KUBERNETES-FOUNDATIONS.md for details.
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: sre-lab
 nodes:
-  # Node 1: Control-plane (also hosts NGINX Ingress with hostPort mappings)
+  # Node 1: Control-plane + Ingress Gateway
+  # hostPort 80/443 forwards host laptop traffic directly to the NGINX Ingress Controller.
   - role: control-plane
     kubeadmConfigPatches:
       - |
@@ -18,12 +26,14 @@ nodes:
         hostPort: 443
         protocol: TCP
 
-  # Node 2: Worker 1 (Workloads & Database Primary)
+  # Node 2: Worker 1 (Availability Zone A)
+  # Hosts application workloads and CloudNativePG PostgreSQL Primary
   - role: worker
     labels:
       topology.kubernetes.io/zone: zone-a
 
-  # Node 3: Worker 2 (Workloads & Database Standby & Monitoring)
+  # Node 3: Worker 2 (Availability Zone B)
+  # Hosts application workloads, PostgreSQL Standby Replica, and Observability Stack
   - role: worker
     labels:
       topology.kubernetes.io/zone: zone-b

@@ -4,15 +4,31 @@
 
 grafana:
   enabled: true
-  adminPassword: "prom-operator"
+  image:
+    repository: grafana/grafana
+    tag: 11.6.0
+  admin:
+    existingSecret: grafana-admin-secret
+    userKey: admin-user
+    passwordKey: admin-password
 
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi
     limits:
-      cpu: 300m
-      memory: 512Mi
+      cpu: 2000m
+      memory: 1Gi
+
+  grafana.ini:
+    analytics:
+      reporting_enabled: false
+      check_for_updates: false
+      check_for_plugin_updates: false
+    news:
+      news_feed_enabled: false
+    users:
+      allow_sign_up: false
 
   # Enable ConfigMap sidecar to auto-discover Grafana dashboards dynamically
   sidecar:
@@ -43,7 +59,7 @@ grafana:
           tags: [{ key: 'service.name', value: 'job' }]
           queries:
             - name: 'Request rate'
-              query: 'sum(rate(http_requests_total{service_name=~"$${__tags}"}[1m]))'
+              query: 'sum(rate(http_requests_total{service=~"$${__tags}"}[1m]))'
         tracesToLogs:
           datasourceUid: elasticsearch
           tags: ['trace_id']
@@ -59,5 +75,5 @@ grafana:
       jsonData:
         timeField: "@timestamp"
         esVersion: "8.0.0"
-        logMessageField: "message"
+        logMessageField: "msg"
         logLevelField: "level"

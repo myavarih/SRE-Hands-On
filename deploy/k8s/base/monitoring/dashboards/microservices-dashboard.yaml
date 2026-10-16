@@ -28,8 +28,8 @@ data:
           "targets": [
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
-              "expr": "sum(rate(http_requests_total[1m])) by (service_name, route)",
-              "legendFormat": "{{service_name}} - {{route}}"
+              "expr": "sum(rate(http_requests_total[1m])) by (service, handler)",
+              "legendFormat": "{{service}} - {{handler}}"
             }
           ]
         },
@@ -45,8 +45,8 @@ data:
           "targets": [
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
-              "expr": "sum(rate(http_requests_total{status=~\"5..\"}[1m])) by (service_name) / sum(rate(http_requests_total[1m])) by (service_name)",
-              "legendFormat": "{{service_name}} 5xx ratio"
+              "expr": "sum(rate(http_requests_total{status=~\"5..\"}[1m])) by (service) / sum(rate(http_requests_total[1m])) by (service)",
+              "legendFormat": "{{service}} 5xx ratio"
             }
           ]
         },
@@ -62,18 +62,18 @@ data:
           "targets": [
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
-              "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[2m])) by (le, service_name))",
-              "legendFormat": "{{service_name}} P99"
+              "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[2m])) by (le, service))",
+              "legendFormat": "{{service}} P99"
             },
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
-              "expr": "histogram_quantile(0.90, sum(rate(http_request_duration_seconds_bucket[2m])) by (le, service_name))",
-              "legendFormat": "{{service_name}} P90"
+              "expr": "histogram_quantile(0.90, sum(rate(http_request_duration_seconds_bucket[2m])) by (le, service))",
+              "legendFormat": "{{service}} P90"
             },
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
-              "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[2m])) by (le, service_name))",
-              "legendFormat": "{{service_name}} P50"
+              "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[2m])) by (le, service))",
+              "legendFormat": "{{service}} P50"
             }
           ]
         }

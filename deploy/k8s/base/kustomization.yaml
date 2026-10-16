@@ -6,7 +6,6 @@ resources:
   - namespaces.yaml
 
   # 2. Data Layer (HA PostgreSQL CloudNativePG)
-  - data/postgres-secret.yaml
   - data/postgres-cluster.yaml
 
   # 3. Observability - Monitors, Alerts, Dashboards & Tracing
@@ -24,6 +23,7 @@ resources:
   - logging/kibana.yaml
 
   # 5. Microservices & Gateways Application Layer
+  - apps/common-config.yaml
   - apps/auth-service.yaml
   - apps/order-service.yaml
   - apps/payment-service.yaml

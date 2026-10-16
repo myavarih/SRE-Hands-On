@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-kube-prometheus-stack
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: sre-hands-on
+    app.kubernetes.io/component: platform-operator
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 58.7.2
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sre-monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

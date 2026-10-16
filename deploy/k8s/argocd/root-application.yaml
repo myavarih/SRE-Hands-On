@@ -13,10 +13,10 @@ spec:
   source:
     repoURL: https://github.com/myavarih/SRE-Hands-On.git
     targetRevision: main
-    path: deploy/k8s/overlays/local-kind
+    path: deploy/k8s/argocd/apps
   destination:
     server: https://kubernetes.default.svc
-    namespace: sre-app
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true

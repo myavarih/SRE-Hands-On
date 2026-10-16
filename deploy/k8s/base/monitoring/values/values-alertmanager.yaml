@@ -4,6 +4,36 @@
 
 alertmanager:
   enabled: true
+  config:
+    global:
+      resolve_timeout: 5m
+
+    route:
+      group_by: ['alertname', 'namespace', 'service', 'severity']
+      group_wait: 10s
+      group_interval: 30s
+      repeat_interval: 4h
+      receiver: 'local-receiver'
+      routes:
+        # Tier-0 / Critical Alerts
+        - matchers:
+            - severity = critical
+          receiver: 'local-receiver'
+          continue: true
+        # Tier-1 / Warning Alerts
+        - matchers:
+            - severity = warning
+          receiver: 'local-receiver'
+
+    receivers:
+      - name: 'local-receiver'
+        # In a local laptop environment, alerts are aggregated and visible in the
+        # Alertmanager Web UI at http://localhost:9093 or Prometheus at http://localhost:9090/alerts.
+        # To forward to a local webhook/daemon, uncomment:
+        # webhook_configs:
+        #   - url: 'http://host.docker.internal:5001/webhook'
+        #     send_resolved: true
+
   alertmanagerSpec:
     replicas: 1
     resources:

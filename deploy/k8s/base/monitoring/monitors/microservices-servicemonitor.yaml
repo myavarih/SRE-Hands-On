@@ -11,8 +11,13 @@ spec:
     matchNames:
       - sre-app
   selector:
-    matchLabels:
-      app.kubernetes.io/part-of: sre-hands-on
+    matchExpressions:
+      - key: app.kubernetes.io/part-of
+        operator: In
+        values: ["sre-hands-on"]
+      - key: app.kubernetes.io/component
+        operator: In
+        values: ["service", "gateway"]
   endpoints:
     - port: metrics
       path: /metrics

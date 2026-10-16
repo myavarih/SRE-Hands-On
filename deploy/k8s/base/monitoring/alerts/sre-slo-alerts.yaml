@@ -11,14 +11,14 @@ spec:
       rules:
         # P99 Latency SLO Alert (> 500ms for 2m)
         - alert: HighP99LatencyBreach
-          expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route)) > 0.5
+          expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service, handler)) > 0.5
           for: 2m
           labels:
             severity: warning
             sre_tier: tier-1
           annotations:
-            summary: "P99 Latency exceeded 500ms on route {{ $labels.route }}"
-            description: "P99 latency is currently {{ $value }}s on {{ $labels.route }}."
+            summary: "P99 Latency exceeded 500ms on handler {{ $labels.handler }}"
+            description: "P99 latency is currently {{ $value }}s on service {{ $labels.service }} handler {{ $labels.handler }}."
 
         # 5xx Error Rate Alert (> 5% of total requests)
         - alert: High5xxErrorRate

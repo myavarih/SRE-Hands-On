@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - ../../base
+  - local-secrets.yaml
 
 labels:
   - pairs:

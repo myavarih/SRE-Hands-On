@@ -7,13 +7,20 @@ metadata:
     app.kubernetes.io/name: postgresql
     app.kubernetes.io/component: database
 spec:
+  # 2 instances: 1 Primary (read-write) + 1 Standby Replica (read-only)
   instances: 2
+
+  # Synchronous Replication (RPO = 0 Guarantee):
+  # minSyncReplicas: 1 requires WAL logs to be committed to disk on the primary AND confirmed
+  # by the standby before acknowledging COMMIT to the Go application.
+  # See docs/learning/03-DATA-LAYER-CNPG.md for replication and CAP trade-offs.
   minSyncReplicas: 1
   maxSyncReplicas: 1
 
-  # High availability failover configuration
+  # High availability failover: 0s delay immediately promotes standby upon primary node crash
   failoverDelay: 0
 
+  # Bootstrap defines initial schema & database owner credentials
   bootstrap:
     initdb:
       database: app_db
@@ -21,11 +28,13 @@ spec:
       secret:
         name: pg-cluster-app-user
 
+  # Persistent Volume Claims (PVC) provisioned per PostgreSQL pod instance
   storage:
     size: 1Gi
     storageClass: standard
 
-  # Distribute across distinct worker nodes for true high availability
+  # Pod Anti-Affinity guarantees primary and standby are scheduled onto separate physical nodes
+  # (sre-lab-worker and sre-lab-worker2), ensuring zero-downtime when a single node dies.
   affinity:
     enablePodAntiAffinity: true
     topologyKey: kubernetes.io/hostname
@@ -39,4 +48,4 @@ spec:
       cpu: "500m"
 
   monitoring:
-    enablePodMonitor: false
+    enablePodMonitor: true
